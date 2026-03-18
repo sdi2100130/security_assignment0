@@ -18,26 +18,31 @@ jobs:
       - name: 1. Checkout code
         uses: actions/checkout@v4
 
-      - name: 2. Login in GitHub Container Registry
+      - name: 2. Login in Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PAT }}
+
+      - name: 3. Login in GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
-      # Docker wants the names of the images with lower case
-      - name: 3. Convert the name of Repo in lower case
+        
+      - name: 4. Convert the name of Repo in lower case
         run: |
           echo "REPO=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: 4. Build and Push Docker Image
+      - name: 5. Build and Push Docker Image to ghcr.io
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: ghcr.io/${{ env.REPO }}:latest
 
-      - name: 5. Scan with Docker Scout
+      - name: 6. Scan with Docker Scout
         uses: docker/scout-action@v1
         with:
           command: cves
