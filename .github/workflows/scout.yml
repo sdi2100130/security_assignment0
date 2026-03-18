@@ -1,0 +1,45 @@
+name: Docker Scout DevSecOps Pipeline
+
+#pipeline runs automatically everytime there is a push in main branch
+on:
+  push:
+    branches: ["main", "master"]
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+
+    #we give to the bot permisions to write in ghcr.io
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: 1. Checkout code
+        uses: actions/checkout@v4
+
+      - name: 2. Login in GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      # Docker wants the names of the images with lower case
+      - name: 3. Convert the name of Repo in lower case
+        run: echo "REPO=${GITHUB_REPOSITORy,,}" >>${GITHUB_ENV}
+
+      - name: 4. Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ env.REPO }}:latest
+
+      - name: 5. Scan with Docker Scout
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: ghcr.io/${{ env.REPO }}:latest
+          #show critical vulnurabilities of python continue-on-error
+          only-severiries: critical,high
